@@ -17,9 +17,7 @@ async fn main() {
     // setup_database(pool.clone()).await.expect("Failed setting up the database");
 
     let routes = create_routes(pool);
-    let addr:SocketAddr  = ([127, 0, 0, 1], 8080).into();
+    let addr: SocketAddr = ([127, 0, 0, 1], 8080).into();
 
-    warp::serve(routes)
-        .run(addr)
-        .await;
+    warp::serve(routes).run(addr).await;
 }
