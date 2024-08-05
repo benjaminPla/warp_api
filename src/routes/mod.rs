@@ -1,4 +1,4 @@
-use crate::controllers::{create_user, get_users};
+use crate::controllers::{create_user, delete_user, get_users, update_user};
 use crate::errors::handle_errors;
 use crate::middlewares::with_db;
 use serde::Deserialize;
@@ -6,9 +6,9 @@ use sqlx::{Pool, Postgres};
 use warp::Filter;
 
 #[derive(Deserialize)]
-struct CreateUserRequest {
-    email: String,
-    password: String,
+pub struct CreateOrUpdateUserRequest {
+    pub email: String,
+    pub password: String,
 }
 
 pub fn create_routes(
@@ -25,11 +25,31 @@ pub fn create_routes(
     let create_user_route = warp::path("create_user")
         .and(warp::post())
         .and(with_db(pool.clone()))
-        .and(warp::body::json::<CreateUserRequest>())
-        .and_then(|db, body: CreateUserRequest| create_user(db, body.email, body.password))
+        .and(warp::body::json::<CreateOrUpdateUserRequest>())
+        .and_then(create_user)
         .recover(handle_errors);
 
-    let users_routes = warp::path("users").and(get_users_route.or(create_user_route));
+    let update_user_route = warp::path("update_user")
+        .and(warp::put())
+        .and(with_db(pool.clone()))
+        .and(warp::path::param())
+        .and(warp::body::json::<CreateOrUpdateUserRequest>())
+        .and_then(update_user)
+        .recover(handle_errors);
+
+    let delete_user_route = warp::path("delete_user")
+        .and(warp::delete())
+        .and(with_db(pool.clone()))
+        .and(warp::path::param())
+        .and_then(delete_user)
+        .recover(handle_errors);
+
+    let users_routes = warp::path("users").and(
+        get_users_route
+            .or(create_user_route)
+            .or(delete_user_route)
+            .or(update_user_route),
+    );
 
     status.or(users_routes)
 }
