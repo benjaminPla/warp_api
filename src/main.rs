@@ -1,5 +1,4 @@
-use crate::database::create_pool;
-use crate::database::setup_database;
+use crate::helpers::{create_pool, setup_database};
 use crate::routes::create_routes;
 use dotenv::dotenv;
 use std::net::SocketAddr;
