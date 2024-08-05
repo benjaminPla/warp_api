@@ -19,7 +19,8 @@ pub fn create_routes(
     let get_users_route = warp::path("get_users")
         .and(warp::get())
         .and(with_db(pool.clone()))
-        .and_then(get_users);
+        .and_then(get_users)
+        .recover(handle_errors);
 
     let create_user_route = warp::path("create_user")
         .and(warp::post())
@@ -28,7 +29,7 @@ pub fn create_routes(
         .and_then(|db, body: CreateUserRequest| create_user(db, body.email, body.password))
         .recover(handle_errors);
 
-    let users_routes = warp::path("users").and(get_users_route.or(create_user_route.or(ben_route)));
+    let users_routes = warp::path("users").and(get_users_route.or(create_user_route));
 
     status.or(users_routes)
 }

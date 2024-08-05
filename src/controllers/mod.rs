@@ -13,9 +13,17 @@ struct DefaultUserResponse {
 pub async fn get_users(pool: Pool<Postgres>) -> Result<Json, warp::Rejection> {
     let mut rows = sqlx::query("SELECT * FROM users;").fetch(&pool);
     let mut users = Vec::new();
-    while let Some(row) = rows.try_next().await.expect("Failed to get rows") {
-        let id: i32 = row.try_get("id").expect("Failed to try_get id");
-        let email: String = row.try_get("email").expect("Failed to try_get email");
+    while let Some(row) = rows
+        .try_next()
+        .await
+        .map_err(|_| warp::reject::custom(InternalServerError))?
+    {
+        let id: i32 = row
+            .try_get("id")
+            .map_err(|_| warp::reject::custom(InternalServerError))?;
+        let email: String = row
+            .try_get("email")
+            .map_err(|_| warp::reject::custom(InternalServerError))?;
         let user = DefaultUserResponse { id, email };
         users.push(user);
     }
