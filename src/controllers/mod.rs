@@ -1,12 +1,17 @@
 use futures::TryStreamExt;
+use serde::Serialize;
 use sqlx::{Pool, Postgres, Row};
 use warp::reply::Json;
-use serde::Serialize;
+
+#[derive(Debug)]
+pub struct InternalServerError;
+
+impl warp::reject::Reject for InternalServerError {}
 
 #[derive(Serialize)]
 struct DefaultUserResponse {
     id: i32,
-    email: String
+    email: String,
 }
 
 pub async fn get_users(pool: Pool<Postgres>) -> Result<Json, warp::Rejection> {
@@ -15,7 +20,7 @@ pub async fn get_users(pool: Pool<Postgres>) -> Result<Json, warp::Rejection> {
     while let Some(row) = rows.try_next().await.expect("Failed to get rows") {
         let id: i32 = row.try_get("id").expect("Failed to try_get id");
         let email: String = row.try_get("email").expect("Failed to try_get email");
-        let user = DefaultUserResponse {id, email};
+        let user = DefaultUserResponse { id, email };
         users.push(user);
     }
     Ok(warp::reply::json(&users))
@@ -32,13 +37,17 @@ pub async fn create_user(
             .bind(password)
             .fetch_one(&pool)
             .await
-            .expect("Failed inserting user");
-    let id: i32 = row.try_get("id").expect("Failed to try_get id");
-    let email: String = row.try_get("email").expect("Failed to try_get email");
+            .map_err(|_| warp::reject::custom(InternalServerError))?;
+    let id: i32 = row
+        .try_get("id")
+        .map_err(|_| warp::reject::custom(InternalServerError))?;
+    let email: String = row
+        .try_get("email")
+        .map_err(|_| warp::reject::custom(InternalServerError))?;
     let user = DefaultUserResponse { id, email };
     Ok(warp::reply::json(&user))
 }
 
-pub async fn ben() ->Result<String, warp::Rejection> {
+pub async fn ben() -> Result<String, warp::Rejection> {
     Ok("hi ben".to_string())
 }
