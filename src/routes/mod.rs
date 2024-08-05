@@ -1,4 +1,4 @@
-use crate::controllers::{create_user, delete_user, get_users, update_user};
+use crate::controllers::{authenticate, create_user, delete_user, get_users, update_user};
 use crate::errors::handle_errors;
 use crate::middlewares::with_db;
 use serde::Deserialize;
@@ -6,7 +6,7 @@ use sqlx::{Pool, Postgres};
 use warp::Filter;
 
 #[derive(Deserialize)]
-pub struct CreateOrUpdateUserRequest {
+pub struct UserRequest {
     pub email: String,
     pub password: String,
 }
@@ -25,7 +25,7 @@ pub fn create_routes(
     let create_user_route = warp::path("create_user")
         .and(warp::post())
         .and(with_db(pool.clone()))
-        .and(warp::body::json::<CreateOrUpdateUserRequest>())
+        .and(warp::body::json::<UserRequest>())
         .and_then(create_user)
         .recover(handle_errors);
 
@@ -33,7 +33,7 @@ pub fn create_routes(
         .and(warp::put())
         .and(with_db(pool.clone()))
         .and(warp::path::param())
-        .and(warp::body::json::<CreateOrUpdateUserRequest>())
+        .and(warp::body::json::<UserRequest>())
         .and_then(update_user)
         .recover(handle_errors);
 
@@ -51,5 +51,13 @@ pub fn create_routes(
             .or(update_user_route),
     );
 
-    status.or(users_routes)
+    let authenticate_route = warp::path("authenticate")
+        .and(warp::post())
+        .and(with_db(pool.clone()))
+        // .and(warp::header::<String>("Authorization"))
+        .and(warp::body::json::<UserRequest>())
+        .and_then(authenticate)
+        .recover(handle_errors);
+
+    status.or(authenticate_route).or(users_routes)
 }

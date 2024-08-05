@@ -4,6 +4,7 @@ use warp::{http::StatusCode, reject::Reject, Rejection, Reply};
 pub enum ServerError {
     InternalServerError,
     NotFound,
+    Unauthorized,
 }
 
 impl ServerError {
@@ -11,6 +12,7 @@ impl ServerError {
         match self {
             ServerError::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
             ServerError::NotFound => StatusCode::NOT_FOUND,
+            ServerError::Unauthorized => StatusCode::UNAUTHORIZED,
         }
     }
 
@@ -18,6 +20,7 @@ impl ServerError {
         match self {
             ServerError::InternalServerError => "Internal Server Error",
             ServerError::NotFound => "Not Found",
+            ServerError::Unauthorized => "Unauthorized",
         }
     }
 }

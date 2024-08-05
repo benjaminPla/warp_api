@@ -1,10 +1,17 @@
 use argon2::{
-    // password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
-    password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
+    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
 };
+use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+use serde::{Deserialize, Serialize};
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 use std::env;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Claims {
+    pub id: i32,
+    pub email: String,
+}
 
 pub fn hash_password(password: &str) -> String {
     let argon2 = Argon2::default();
@@ -16,13 +23,13 @@ pub fn hash_password(password: &str) -> String {
     password_hash
 }
 
-// pub fn verify_password(hashed_password: &str, password: &str) -> bool {
-// let argon2 = Argon2::default();
-// let parsed_hash = PasswordHash::new(hashed_password).expect("Error parsing hashed password");
-// argon2
-// .verify_password(password.as_bytes(), &parsed_hash)
-// .is_ok()
-// }
+pub fn verify_password(hashed_password: &str, password: &str) -> bool {
+    let argon2 = Argon2::default();
+    let parsed_hash = PasswordHash::new(hashed_password).expect("Error parsing hashed password");
+    argon2
+        .verify_password(password.as_bytes(), &parsed_hash)
+        .is_ok()
+}
 
 pub async fn create_pool() -> Result<Pool<Postgres>, sqlx::Error> {
     let database_password =
@@ -64,3 +71,39 @@ pub async fn setup_database(pool: Pool<Postgres>) -> Result<(), sqlx::Error> {
 
     Ok(())
 }
+
+pub fn create_token(claims: Claims) -> String {
+    encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret("secret".as_ref()),
+    )
+    .unwrap()
+}
+
+pub fn verify_token(token: String) -> bool {
+    decode::<Claims>(
+        &token,
+        &DecodingKey::from_secret("secret".as_ref()),
+        &Validation::new(Algorithm::HS256),
+    )
+    .is_ok()
+}
+
+// pub fn validate_token(token: &str) -> Result<TokenData<Claims>, TokenValidationError> {
+// let secret_key = env::var("JWT_SECRET_KEY").expect("Missing `JWT_SECRET_KEY` env variable");
+// let secret_key_bytes = secret_key.as_bytes();
+// match decode::<Claims>(
+// token,
+// &DecodingKey::from_secret(secret_key_bytes),
+// &Validation::new(Algorithm::HS256),
+// ) {
+// Ok(token_data) => Ok(token_data),
+// Err(err) => match *err.kind() {
+// ErrorKind::ExpiredSignature => Err(TokenValidationError::Expired),
+// ErrorKind::InvalidToken => Err(TokenValidationError::Invalid),
+// _ => Err(TokenValidationError::Other),
+// },
+// }
+// }
+// }

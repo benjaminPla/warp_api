@@ -1,6 +1,6 @@
 use crate::errors::ServerError;
-use crate::helpers::hash_password;
-use crate::routes::CreateOrUpdateUserRequest;
+use crate::helpers::{create_token, hash_password, verify_password, Claims};
+use crate::routes::UserRequest;
 use futures::TryStreamExt;
 use serde::Serialize;
 use sqlx::{Pool, Postgres, Row};
@@ -10,6 +10,46 @@ use warp::{Rejection, Reply};
 struct DefaultUserResponse {
     id: i32,
     email: String,
+}
+
+#[derive(Serialize)]
+struct AuthenticateResponse {
+    token: String,
+}
+
+pub async fn authenticate(
+    pool: Pool<Postgres>,
+    body: UserRequest,
+) -> Result<impl Reply, Rejection> {
+    let email = body.email;
+    let password = body.password;
+    let row = sqlx::query("SELECT id, email, password FROM users WHERE email = $1;")
+        .bind(email)
+        .fetch_one(&pool)
+        .await;
+    match row {
+        Ok(row) => {
+            let id: i32 = row
+                .try_get("id")
+                .map_err(|_| ServerError::InternalServerError)?;
+            let email: String = row
+                .try_get("email")
+                .map_err(|_| ServerError::InternalServerError)?;
+            let hashed_password: String = row
+                .try_get("password")
+                .map_err(|_| ServerError::InternalServerError)?;
+            match verify_password(&hashed_password, &password) {
+                true => {
+                    let claims = Claims { id, email };
+                    let token = create_token(claims);
+                    Ok(warp::reply::json(&AuthenticateResponse { token }))
+                }
+                false => Err(ServerError::Unauthorized)?,
+            }
+        }
+        Err(sqlx::Error::RowNotFound) => Err(ServerError::NotFound)?,
+        Err(_) => Err(ServerError::InternalServerError)?,
+    }
 }
 
 pub async fn get_users(pool: Pool<Postgres>) -> Result<impl Reply, Rejection> {
@@ -32,10 +72,7 @@ pub async fn get_users(pool: Pool<Postgres>) -> Result<impl Reply, Rejection> {
     Ok(warp::reply::json(&users))
 }
 
-pub async fn create_user(
-    pool: Pool<Postgres>,
-    body: CreateOrUpdateUserRequest,
-) -> Result<impl Reply, Rejection> {
+pub async fn create_user(pool: Pool<Postgres>, body: UserRequest) -> Result<impl Reply, Rejection> {
     let email = body.email;
     let password = body.password;
     let hashed_password = hash_password(&password);
@@ -63,7 +100,7 @@ pub async fn create_user(
 pub async fn update_user(
     pool: Pool<Postgres>,
     id: i32,
-    body: CreateOrUpdateUserRequest,
+    body: UserRequest,
 ) -> Result<impl Reply, Rejection> {
     let email = body.email;
     let password = body.password;
