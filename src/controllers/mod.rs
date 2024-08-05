@@ -1,12 +1,8 @@
+use crate::errors::InternalServerError;
 use futures::TryStreamExt;
 use serde::Serialize;
 use sqlx::{Pool, Postgres, Row};
 use warp::reply::Json;
-
-#[derive(Debug)]
-pub struct InternalServerError;
-
-impl warp::reject::Reject for InternalServerError {}
 
 #[derive(Serialize)]
 struct DefaultUserResponse {
@@ -46,8 +42,4 @@ pub async fn create_user(
         .map_err(|_| warp::reject::custom(InternalServerError))?;
     let user = DefaultUserResponse { id, email };
     Ok(warp::reply::json(&user))
-}
-
-pub async fn ben() -> Result<String, warp::Rejection> {
-    Ok("hi ben".to_string())
 }

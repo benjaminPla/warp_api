@@ -1,24 +1,14 @@
-use crate::controllers::InternalServerError;
-use crate::controllers::{ben, create_user, get_users};
+use crate::controllers::{create_user, get_users};
+use crate::errors::handle_errors;
 use crate::middlewares::with_db;
 use serde::Deserialize;
 use sqlx::{Pool, Postgres};
-use warp::{http::StatusCode, Filter, Rejection, Reply};
+use warp::Filter;
 
 #[derive(Deserialize)]
 struct CreateUserRequest {
     email: String,
     password: String,
-}
-
-pub async fn handle_rejection(err: Rejection) -> Result<impl Reply, Rejection> {
-    if let Some(_) = err.find::<InternalServerError>() {
-        return Ok(warp::reply::with_status(
-            "Internal Server Error".to_string(),
-            StatusCode::INTERNAL_SERVER_ERROR,
-        ));
-    }
-    Err(err)
 }
 
 pub fn create_routes(
@@ -36,9 +26,7 @@ pub fn create_routes(
         .and(with_db(pool.clone()))
         .and(warp::body::json::<CreateUserRequest>())
         .and_then(|db, body: CreateUserRequest| create_user(db, body.email, body.password))
-        .recover(handle_rejection);
-
-    let ben_route = warp::path("ben").and(warp::get()).and_then(ben);
+        .recover(handle_errors);
 
     let users_routes = warp::path("users").and(get_users_route.or(create_user_route.or(ben_route)));
 
