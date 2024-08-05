@@ -30,7 +30,7 @@ pub async fn setup_database(pool: Pool<Postgres>) -> Result<(), sqlx::Error> {
 
     let email = "benjaminpla.dev@gmail.com";
     let password = "12345";
-    sqlx::query("INSERT INTO users (email, password) VALUES ($1, $2)")
+    sqlx::query("INSERT INTO users (email, password) VALUES ($1, $2) ON CONFLICT (email) DO NOTHING;")
         .bind(email)
         .bind(password)
         .execute(&pool)
