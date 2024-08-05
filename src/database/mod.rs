@@ -1,3 +1,4 @@
+use crate::helpers::hash_password;
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 use std::env;
 
@@ -21,7 +22,7 @@ pub async fn setup_database(pool: Pool<Postgres>) -> Result<(), sqlx::Error> {
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
             email VARCHAR(50) UNIQUE NOT NULL,
-            password VARCHAR(50) NOT NULL
+            password VARCHAR(225) NOT NULL
         )
         ",
     )
@@ -29,12 +30,13 @@ pub async fn setup_database(pool: Pool<Postgres>) -> Result<(), sqlx::Error> {
     .await?;
 
     let email = "benjaminpla.dev@gmail.com";
-    let password = "12345";
+    let password = env::var("ADMIN_PASSWORD").expect("Missing \"ADMIN_PASSWORD\" env variable");
+    let hashed_password = hash_password(&password);
     sqlx::query(
         "INSERT INTO users (email, password) VALUES ($1, $2) ON CONFLICT (email) DO NOTHING;",
     )
     .bind(email)
-    .bind(password)
+    .bind(hashed_password)
     .execute(&pool)
     .await?;
 

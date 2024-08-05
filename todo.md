@@ -1,3 +1,4 @@
 <!-- - update controllers return type (mix sqlx with warp) -->
 - add jwt
 - add encription to passwords
+- move database to helpers
