@@ -1,4 +1,5 @@
 use crate::errors::ServerError;
+use crate::helpers::hash_password;
 use crate::routes::CreateOrUpdateUserRequest;
 use futures::TryStreamExt;
 use serde::Serialize;
@@ -37,10 +38,11 @@ pub async fn create_user(
 ) -> Result<impl Reply, Rejection> {
     let email = body.email;
     let password = body.password;
+    let hashed_password = hash_password(&password);
     let row =
         sqlx::query("INSERT INTO users (email, password) VALUES ($1, $2) RETURNING id, email;")
             .bind(email)
-            .bind(password)
+            .bind(hashed_password)
             .fetch_one(&pool)
             .await;
     match row {
@@ -65,11 +67,12 @@ pub async fn update_user(
 ) -> Result<impl Reply, Rejection> {
     let email = body.email;
     let password = body.password;
+    let hashed_password = hash_password(&password);
     let row = sqlx::query(
         "UPDATE users SET email = $1, password = $2 WHERE id = $3 RETURNING id, email;",
     )
     .bind(email)
-    .bind(password)
+    .bind(hashed_password)
     .bind(id)
     .fetch_one(&pool)
     .await;
