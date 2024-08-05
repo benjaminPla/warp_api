@@ -1,7 +1,13 @@
 use futures::TryStreamExt;
-use serde_json::json;
 use sqlx::{Pool, Postgres, Row};
 use warp::reply::Json;
+use serde::Serialize;
+
+#[derive(Serialize)]
+struct DefaultUserResponse {
+    id: i32,
+    email: String
+}
 
 pub async fn get_users(pool: Pool<Postgres>) -> Result<Json, warp::Rejection> {
     let mut rows = sqlx::query("SELECT * FROM users;").fetch(&pool);
@@ -9,10 +15,7 @@ pub async fn get_users(pool: Pool<Postgres>) -> Result<Json, warp::Rejection> {
     while let Some(row) = rows.try_next().await.expect("Failed to get rows") {
         let id: i32 = row.try_get("id").expect("Failed to try_get id");
         let email: String = row.try_get("email").expect("Failed to try_get email");
-        let user = json!({
-            "id": id,
-            "email": email,
-        });
+        let user = DefaultUserResponse {id, email};
         users.push(user);
     }
     Ok(warp::reply::json(&users))
@@ -32,9 +35,10 @@ pub async fn create_user(
             .expect("Failed inserting user");
     let id: i32 = row.try_get("id").expect("Failed to try_get id");
     let email: String = row.try_get("email").expect("Failed to try_get email");
-    let user = json!({
-        "id": id,
-        "email": email,
-    });
+    let user = DefaultUserResponse { id, email };
     Ok(warp::reply::json(&user))
+}
+
+pub async fn ben() ->Result<String, warp::Rejection> {
+    Ok("hi ben".to_string())
 }
