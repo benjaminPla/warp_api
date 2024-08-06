@@ -2,15 +2,31 @@ use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
 };
-use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+use chrono::{Duration, Utc};
+use jsonwebtoken::{
+    decode, encode, errors::ErrorKind, Algorithm, DecodingKey, EncodingKey, Header, TokenData,
+    Validation,
+};
 use serde::{Deserialize, Serialize};
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 use std::env;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
-    pub id: i32,
+    pub exp: usize,
+    pub user: User,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct User {
     pub email: String,
+    pub id: i32,
+}
+
+pub enum TokenValidationError {
+    Expired,
+    Invalid,
+    Other,
 }
 
 pub fn hash_password(password: &str) -> String {
@@ -72,38 +88,34 @@ pub async fn setup_database(pool: Pool<Postgres>) -> Result<(), sqlx::Error> {
     Ok(())
 }
 
-pub fn create_token(claims: Claims) -> String {
+pub fn create_token(user: User) -> String {
+    let jwt_secret = env::var("JWT_SECRET").expect("Missing \"JWT_SECRET\" env variable");
+    let jwt_secret_as_bytes = jwt_secret.as_bytes();
+    let claims = Claims {
+        exp: (Utc::now() + Duration::hours(1)).timestamp() as usize,
+        user,
+    };
     encode(
-        &Header::default(),
+        &Header::new(Algorithm::HS256),
         &claims,
-        &EncodingKey::from_secret("secret".as_ref()),
+        &EncodingKey::from_secret(jwt_secret_as_bytes),
     )
-    .unwrap()
+    .expect("Failed to generate token")
 }
 
-pub fn verify_token(token: String) -> bool {
-    decode::<Claims>(
+pub fn verify_token(token: String) -> Result<TokenData<Claims>, TokenValidationError> {
+    let jwt_secret = env::var("JWT_SECRET").expect("Missing \"JWT_SECRET\" env variable");
+    let jwt_secret_as_bytes = jwt_secret.as_bytes();
+    match decode::<Claims>(
         &token,
-        &DecodingKey::from_secret("secret".as_ref()),
+        &DecodingKey::from_secret(jwt_secret_as_bytes),
         &Validation::new(Algorithm::HS256),
-    )
-    .is_ok()
+    ) {
+        Ok(token_data) => Ok(token_data),
+        Err(err) => match *err.kind() {
+            ErrorKind::ExpiredSignature => Err(TokenValidationError::Expired),
+            ErrorKind::InvalidToken => Err(TokenValidationError::Invalid),
+            _ => Err(TokenValidationError::Other),
+        },
+    }
 }
-
-// pub fn validate_token(token: &str) -> Result<TokenData<Claims>, TokenValidationError> {
-// let secret_key = env::var("JWT_SECRET_KEY").expect("Missing `JWT_SECRET_KEY` env variable");
-// let secret_key_bytes = secret_key.as_bytes();
-// match decode::<Claims>(
-// token,
-// &DecodingKey::from_secret(secret_key_bytes),
-// &Validation::new(Algorithm::HS256),
-// ) {
-// Ok(token_data) => Ok(token_data),
-// Err(err) => match *err.kind() {
-// ErrorKind::ExpiredSignature => Err(TokenValidationError::Expired),
-// ErrorKind::InvalidToken => Err(TokenValidationError::Invalid),
-// _ => Err(TokenValidationError::Other),
-// },
-// }
-// }
-// }

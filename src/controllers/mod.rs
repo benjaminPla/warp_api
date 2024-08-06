@@ -1,5 +1,5 @@
-use crate::errors::ServerError;
-use crate::helpers::{create_token, hash_password, verify_password, Claims};
+use crate::errors::{ServerError, UnauthorizedTypes};
+use crate::helpers::{create_token, hash_password, verify_password, User};
 use crate::routes::UserRequest;
 use futures::TryStreamExt;
 use serde::Serialize;
@@ -38,13 +38,13 @@ pub async fn authenticate(
             let hashed_password: String = row
                 .try_get("password")
                 .map_err(|_| ServerError::InternalServerError)?;
+            let user = User { email, id };
             match verify_password(&hashed_password, &password) {
                 true => {
-                    let claims = Claims { id, email };
-                    let token = create_token(claims);
+                    let token = create_token(user);
                     Ok(warp::reply::json(&AuthenticateResponse { token }))
                 }
-                false => Err(ServerError::Unauthorized)?,
+                false => Err(ServerError::Unauthorized(UnauthorizedTypes::Default))?,
             }
         }
         Err(sqlx::Error::RowNotFound) => Err(ServerError::NotFound)?,
@@ -52,7 +52,7 @@ pub async fn authenticate(
     }
 }
 
-pub async fn get_users(pool: Pool<Postgres>) -> Result<impl Reply, Rejection> {
+pub async fn get_users(pool: Pool<Postgres>, _: ()) -> Result<impl Reply, Rejection> {
     let mut rows = sqlx::query("SELECT * FROM users;").fetch(&pool);
     let mut users = Vec::new();
     while let Some(row) = rows

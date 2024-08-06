@@ -1,10 +1,17 @@
 use warp::{http::StatusCode, reject::Reject, Rejection, Reply};
 
 #[derive(Debug)]
+pub enum UnauthorizedTypes {
+    Default,
+    TokenExpired,
+    TokenInvalid,
+}
+
+#[derive(Debug)]
 pub enum ServerError {
     InternalServerError,
     NotFound,
-    Unauthorized,
+    Unauthorized(UnauthorizedTypes),
 }
 
 impl ServerError {
@@ -12,7 +19,7 @@ impl ServerError {
         match self {
             ServerError::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
             ServerError::NotFound => StatusCode::NOT_FOUND,
-            ServerError::Unauthorized => StatusCode::UNAUTHORIZED,
+            ServerError::Unauthorized(_) => StatusCode::UNAUTHORIZED,
         }
     }
 
@@ -20,7 +27,11 @@ impl ServerError {
         match self {
             ServerError::InternalServerError => "Internal Server Error",
             ServerError::NotFound => "Not Found",
-            ServerError::Unauthorized => "Unauthorized",
+            ServerError::Unauthorized(unauth_type) => match unauth_type {
+                UnauthorizedTypes::Default => "Unauthorized",
+                UnauthorizedTypes::TokenExpired => "Token expired",
+                UnauthorizedTypes::TokenInvalid => "Invalid token",
+            },
         }
     }
 }
