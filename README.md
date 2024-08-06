@@ -43,17 +43,21 @@ This command sets up a PostgreSQL instance with the password choosed, mapping po
 
 ## Configuration
 
-To configure the project, follow these steps:
-
 1. **Create a `.env` file in the project root** and add the necessary environment variables:
 
 ```env
 ADMIN_PASSWORD='12345'
-DATABASE_PASSWORD='12345'
-JWT_SECRET='12345'
+DATABASE_URL='postgres://postgres:12345@localhost:5432/postgres'
+JWT_SECRET='your_jwt_secret_key'
+PORT=8080
 ```
 
-2. The `DATABASE_PASSWORD` variable specifies the password for PostgreSQL connection. The `JWT_SECRET` is used for signing JWTs. The `ADMIN_PASSWORD` is used to create an initial admin user.
+2. The environment variables are used as follows:
+
+- **`DATABASE_URL`**: Specifies the connection string for PostgreSQL. It includes the database user, password, host, port, and database name. In this example, it connects to a PostgreSQL instance running locally with the default port.
+- **`JWT_SECRET`**: Used for signing and verifying JSON Web Tokens (JWT). Replace `'your_jwt_secret_key'` with a secure key for your application.
+- **`ADMIN_PASSWORD`**: Used to create an initial admin user. Ensure this password is secure and properly managed.
+- **`PORT`**: The port on which the server will listen for incoming connections.
 
 ## Running Locally
 
@@ -75,20 +79,20 @@ cargo run
 
 This project provides the following API endpoints:
 
-| Endpoint                  | Description                                             | HTTP Method |
-| ------------------------- | ------------------------------------------------------- | ----------- |
-| `/authenticate`           | User authenticate endpoint, requires email and password | POST        |
-| `/status`                 | Check server status                                     | GET         |
-| `/users/create_user`      | Create a new user                                       | POST        |
-| `/users/delete_user/{id}` | Delete a user by id                                     | DELETE      |
-| `/users/get_users`        | Retrieve a list of all users (admin only)               | GET         |
-| `/users/update_user/{id}` | Update a user by id                                     | PUT         |
+| Endpoint                  | Description                                               | HTTP Method |
+| ------------------------- | --------------------------------------------------------- | ----------- |
+| `/authenticate`           | User authentication endpoint, requires email and password | POST        |
+| `/status`                 | Check server status                                       | GET         |
+| `/users/create_user`      | Create a new user (requires authentication)               | POST        |
+| `/users/delete_user/{id}` | Delete a user by id (requires authentication)             | DELETE      |
+| `/users/get_users`        | Retrieve a list of all users (requires authentication)    | GET         |
+| `/users/update_user/{id}` | Update a user by id (requires authentication)             | PUT         |
 
 ### JWT Authentication
 
 - **`/authenticate`**: Provides a JWT token upon successful authentication. The token must be included in the `Authorization` header for requests to protected endpoints.
 
-- **Protected Endpoints**: The `/users/get_users` endpoint requires the user to be authenticated.
+- **Protected Endpoints**: All endpoints except `/status` and `/authenticate` require the user to be authenticated. Ensure that requests to these endpoints include a valid JWT token in the `Authorization` header.
 
 ## Images
 
@@ -99,6 +103,3 @@ This project provides the following API endpoints:
 ![image](https://github.com/user-attachments/assets/eaa49406-c2c1-4b33-9659-b37e90cebf8c)
 
 ![image](https://github.com/user-attachments/assets/36f25ca5-86ad-4452-9f9e-2d0cbc1d2b4b)
-
-
-

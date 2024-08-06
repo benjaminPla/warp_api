@@ -40,10 +40,10 @@ pub async fn authenticate(
                 .map_err(|_| ServerError::InternalServerError)?;
             let user = User { email, id };
             match verify_password(&hashed_password, &password) {
-                true => {
-                    let token = create_token(user);
-                    Ok(warp::reply::json(&AuthenticateResponse { token }))
-                }
+                true => match create_token(user) {
+                    Ok(token) => Ok(warp::reply::json(&AuthenticateResponse { token })),
+                    Err(_) => Err(ServerError::InternalServerError)?,
+                },
                 false => Err(ServerError::Unauthorized(UnauthorizedTypes::Default))?,
             }
         }
@@ -72,7 +72,11 @@ pub async fn get_users(pool: Pool<Postgres>, _: ()) -> Result<impl Reply, Reject
     Ok(warp::reply::json(&users))
 }
 
-pub async fn create_user(pool: Pool<Postgres>, body: UserRequest) -> Result<impl Reply, Rejection> {
+pub async fn create_user(
+    pool: Pool<Postgres>,
+    _: (),
+    body: UserRequest,
+) -> Result<impl Reply, Rejection> {
     let email = body.email;
     let password = body.password;
     let hashed_password = hash_password(&password);
@@ -99,6 +103,7 @@ pub async fn create_user(pool: Pool<Postgres>, body: UserRequest) -> Result<impl
 
 pub async fn update_user(
     pool: Pool<Postgres>,
+    _: (),
     id: i32,
     body: UserRequest,
 ) -> Result<impl Reply, Rejection> {
@@ -129,7 +134,7 @@ pub async fn update_user(
     }
 }
 
-pub async fn delete_user(pool: Pool<Postgres>, id: i32) -> Result<impl Reply, Rejection> {
+pub async fn delete_user(pool: Pool<Postgres>, _: (), id: i32) -> Result<impl Reply, Rejection> {
     let row = sqlx::query("DELETE FROM users WHERE id = $1 RETURNING id, email;")
         .bind(id)
         .fetch_one(&pool)

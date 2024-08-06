@@ -1,7 +1,7 @@
 use crate::helpers::{create_pool, setup_database};
 use crate::routes::create_routes;
 use dotenv::dotenv;
-use std::net::SocketAddr;
+use std::{env, net::SocketAddr};
 
 mod controllers;
 mod errors;
@@ -18,8 +18,12 @@ async fn main() {
         .await
         .expect("Failed setting up the database");
 
+    let port = env::var("PORT")
+        .expect("Missing \"PORT\" env variable")
+        .parse::<u16>()
+        .expect("PORT must be a number");
     let routes = create_routes(pool);
-    let addr: SocketAddr = ([127, 0, 0, 1], 8080).into();
+    let addr: SocketAddr = ([127, 0, 0, 1], port).into();
 
     warp::serve(routes).run(addr).await;
 }

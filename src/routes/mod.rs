@@ -26,6 +26,7 @@ pub fn create_routes(
     let create_user_route = warp::path("create_user")
         .and(warp::post())
         .and(db_middleware(pool.clone()))
+        .and(authenticate_middleware())
         .and(warp::body::json::<UserRequest>())
         .and_then(create_user)
         .recover(handle_errors);
@@ -33,6 +34,7 @@ pub fn create_routes(
     let update_user_route = warp::path("update_user")
         .and(warp::put())
         .and(db_middleware(pool.clone()))
+        .and(authenticate_middleware())
         .and(warp::path::param())
         .and(warp::body::json::<UserRequest>())
         .and_then(update_user)
@@ -41,6 +43,7 @@ pub fn create_routes(
     let delete_user_route = warp::path("delete_user")
         .and(warp::delete())
         .and(db_middleware(pool.clone()))
+        .and(authenticate_middleware())
         .and(warp::path::param())
         .and_then(delete_user)
         .recover(handle_errors);

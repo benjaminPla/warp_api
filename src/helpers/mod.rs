@@ -88,8 +88,8 @@ pub async fn setup_database(pool: Pool<Postgres>) -> Result<(), sqlx::Error> {
     Ok(())
 }
 
-pub fn create_token(user: User) -> String {
-    let jwt_secret = env::var("JWT_SECRET").expect("Missing \"JWT_SECRET\" env variable");
+pub fn create_token(user: User) -> Result<String, ()> {
+    let jwt_secret = env::var("JWT_SECRET").map_err(|_|())?;
     let jwt_secret_as_bytes = jwt_secret.as_bytes();
     let claims = Claims {
         exp: (Utc::now() + Duration::hours(1)).timestamp() as usize,
@@ -100,11 +100,11 @@ pub fn create_token(user: User) -> String {
         &claims,
         &EncodingKey::from_secret(jwt_secret_as_bytes),
     )
-    .expect("Failed to generate token")
+    .map_err(|_| ())
 }
 
 pub fn verify_token(token: String) -> Result<TokenData<Claims>, TokenValidationError> {
-    let jwt_secret = env::var("JWT_SECRET").expect("Missing \"JWT_SECRET\" env variable");
+    let jwt_secret = env::var("JWT_SECRET").map_err(|_| TokenValidationError::Other)?;
     let jwt_secret_as_bytes = jwt_secret.as_bytes();
     match decode::<Claims>(
         &token,
