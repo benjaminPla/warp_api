@@ -91,3 +91,14 @@ This project provides the following API endpoints:
 - **Protected Endpoints**: The `/users/get_users` endpoint requires the user to be authenticated.
 
 ## Images
+
+![image](https://github.com/user-attachments/assets/55652a7c-e4d9-4f90-b6d7-3c35da99fe33)
+
+![image](https://github.com/user-attachments/assets/e4b7cbfc-0b11-4951-8520-fc243f4b4201)
+
+![image](https://github.com/user-attachments/assets/eaa49406-c2c1-4b33-9659-b37e90cebf8c)
+
+![image](https://github.com/user-attachments/assets/36f25ca5-86ad-4452-9f9e-2d0cbc1d2b4b)
+
+
+
