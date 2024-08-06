@@ -73,7 +73,6 @@ pub async fn setup_database(pool: Pool<Postgres>) -> Result<(), sqlx::Error> {
     )
     .execute(&pool)
     .await?;
-
     let email = "benjaminpla.dev@gmail.com";
     let password = env::var("ADMIN_PASSWORD").expect("Missing \"ADMIN_PASSWORD\" env variable");
     let hashed_password = hash_password(&password);
@@ -84,7 +83,6 @@ pub async fn setup_database(pool: Pool<Postgres>) -> Result<(), sqlx::Error> {
     .bind(hashed_password)
     .execute(&pool)
     .await?;
-
     Ok(())
 }
 
